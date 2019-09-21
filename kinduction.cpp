@@ -88,7 +88,10 @@ namespace cosa
     }
 
     Term bad = solver_->make_term(PrimOp::Not, property_.prop());
-    
+
+    // trans goes at base context
+    solver_->assert_formula(unroller_.at_time(ts_.trans(), i));
+
     solver_->push();
     solver_->assert_formula(unroller_.at_time(ts_.init(), 0));
     solver_->assert_formula(unroller_.at_time(bad, i));
@@ -99,7 +102,6 @@ namespace cosa
     }
     solver_->pop();
 
-    solver_->assert_formula(unroller_.at_time(ts_.trans(), i));
     solver_->assert_formula(unroller_.at_time(property_.prop(), i));
     
     return true;

@@ -86,9 +86,7 @@ namespace cosa
     bool res = true;
     Term bad = solver_->make_term(PrimOp::Not, property_.prop());
 
-    if (i > 0) {
-      solver_->assert_formula(unroller_.at_time(ts_.trans(), i-1));
-    }
+    solver_->assert_formula(unroller_.at_time(ts_.trans(), i));
 
     solver_->push();
     solver_->assert_formula(unroller_.at_time(bad, i));

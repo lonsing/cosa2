@@ -1,5 +1,5 @@
 /*********************                                                        */
-/*! \file 
+/*! \file
  ** \verbatim
  ** Top contributors (to current version):
  **   Makai Mann, Ahmed Irfan
@@ -9,9 +9,9 @@
  ** All rights reserved.  See the file LICENSE in the top-level source
  ** directory for licensing information.\endverbatim
  **
- ** \brief 
+ ** \brief
  **
- ** 
+ **
  **/
 
 
@@ -30,7 +30,7 @@ class RelationalTransitionSystem
 {
  public:
   RelationalTransitionSystem(smt::SmtSolver & s)
-   : solver_(s), init_(s->make_term(true)), trans_(s->make_term(true))
+    : solver_(s), init_(s->make_term(true)), trans_(s->make_term(true))
   {
   }
 
@@ -83,21 +83,11 @@ class RelationalTransitionSystem
    */
   void name_term(const std::string name, const smt::Term & t);
 
-  /* Create an input of a given sort
-   * @param name the name of the input
-   * @param sort the sort of the input
-   * @return the input term
+  /* Declare a state variable
+   * @param curr_state the current state symbol
+   * @param next_state the next state symbol (sort must match curr sort)
    */
-  smt::Term make_input(const std::string name, const smt::Sort & sort);
-
-  /* Create an state of a given sort
-   * @param name the name of the state
-   * @param sort the sort of the state
-   * @return the current state variable
-   *
-   * Can get next state var with next(const smt::Term t)
-   */
-  smt::Term make_state(const std::string name, const smt::Sort & sort);
+  void declare_state(const smt::Term & curr_state, const smt::Term & next_state);
 
   /* Map all next state variables to current state variables in the term
    * @param t the term to map
@@ -194,6 +184,10 @@ class RelationalTransitionSystem
 
   /* Returns true iff all the symbols in the formula are known */
   bool known_symbols(const smt::Term & term) const;
+
+  /* Update inputs by scanning a term for non-state symbols */
+  void update_inputs(smt::Term term);
+
 };
 
 }  // namespace cosa

@@ -45,19 +45,10 @@ class FunctionalTransitionSystem : public RelationalTransitionSystem
   smt::Term is_curr_var(const smt::Term & sv) const = delete;
   smt::Term is_next_var(const smt::Term & sv) const = delete;
 
-  // overloaded
-  smt::Term make_input(const std::string name, const smt::Sort & sort);
-
-  // overloaded
-  smt::Term make_state(const std::string name, const smt::Sort & sort);
-
 
  protected:
 
   // helpers and checkers
-
-  // overloaded
-  bool known_symbols(const smt::Term & term);
 
   // Note: this method is not exposed, because the user should not be able to
   //       build terms with next states

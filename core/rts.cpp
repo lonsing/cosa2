@@ -1,5 +1,5 @@
 /*********************                                                        */
-/*! \file 
+/*! \file
  ** \verbatim
  ** Top contributors (to current version):
  **   Makai Mann, Ahmed Irfan
@@ -9,13 +9,14 @@
  ** All rights reserved.  See the file LICENSE in the top-level source
  ** directory for licensing information.\endverbatim
  **
- ** \brief 
+ ** \brief
  **
- ** 
+ **
  **/
 
 
 #include "rts.h"
+#include "utils/term_analysis.h"
 
 using namespace smt;
 using namespace std;
@@ -31,6 +32,8 @@ void RelationalTransitionSystem::set_behavior(const Term & init,
   }
   init_ = init;
   trans_ = trans;
+  update_inputs(init_);
+  update_inputs(trans_);
 }
 
 void RelationalTransitionSystem::set_init(const Term & init)
@@ -41,6 +44,7 @@ void RelationalTransitionSystem::set_init(const Term & init)
   }
 
   init_ = init;
+  update_inputs(init_);
 }
 
 void RelationalTransitionSystem::constrain_init(const Term & constraint)
@@ -50,6 +54,7 @@ void RelationalTransitionSystem::constrain_init(const Term & constraint)
     throw CosaException("Unknown symbols");
   }
   init_ = solver_->make_term(And, init_, constraint);
+  update_inputs(constraint);
 }
 
 void RelationalTransitionSystem::set_trans(const Term & trans)
@@ -59,6 +64,7 @@ void RelationalTransitionSystem::set_trans(const Term & trans)
     throw CosaException("Unknown symbols");
   }
   trans_ = trans;
+  update_inputs(trans);
 }
 
 void RelationalTransitionSystem::constrain_trans(const Term & constraint)
@@ -68,6 +74,7 @@ void RelationalTransitionSystem::constrain_trans(const Term & constraint)
     throw CosaException("Unknown symbols");
   }
   trans_ = solver_->make_term(And, trans_, constraint);
+  update_inputs(constraint);
 }
 
 void RelationalTransitionSystem::set_next(const Term & state, const Term & val)
@@ -81,6 +88,7 @@ void RelationalTransitionSystem::set_next(const Term & state, const Term & val)
   state_updates_[state] = val;
   trans_ = solver_->make_term(
                               And, trans_, solver_->make_term(Equal, next_map_.at(state), val));
+  update_inputs(val);
 }
 
 void RelationalTransitionSystem::add_invar(const Term & constraint)
@@ -92,6 +100,8 @@ void RelationalTransitionSystem::add_invar(const Term & constraint)
     // add the next-state version
     trans_ = solver_->make_term(
                                 And, trans_, solver_->substitute(constraint, next_map_));
+
+    // NOTE: don't need to update inputs because constraint has only current state variables
   } else {
     throw CosaException(
                         "Invariants should be over current states and inputs only.");
@@ -104,30 +114,20 @@ void RelationalTransitionSystem::name_term(const string name, const Term & t)
     throw CosaException("Name has already been used.");
   }
   named_terms_[name] = t;
+  update_inputs(t);
 }
 
-Term RelationalTransitionSystem::make_input(const string name,
-                                            const Sort & sort)
+void RelationalTransitionSystem::declare_state(const Term & curr_state,
+                                               const Term & next_state)
 {
-  Term input = solver_->make_symbol(name, sort);
-  inputs_.insert(input);
-  // for invariant constraints, need to assert over next inputs
-  Term next_input = solver_->make_symbol(name + ".next", sort);
-  next_map_[input] = next_input;
-  curr_map_[next_input] = input;
-  return input;
-}
-
-Term RelationalTransitionSystem::make_state(const string name,
-                                            const Sort & sort)
-{
-  Term state = solver_->make_symbol(name, sort);
-  Term next_state = solver_->make_symbol(name + ".next", sort);
-  states_.insert(state);
+  states_.insert(curr_state);
   next_states_.insert(next_state);
-  next_map_[state] = next_state;
-  curr_map_[next_state] = state;
-  return state;
+  next_map_[curr_state] = next_state;
+  curr_map_[next_state] = curr_state;
+
+  // if symbol was previously an input, needs to be removed
+  inputs_.erase(curr_state);
+  inputs_.erase(next_state);
 }
 
 Term RelationalTransitionSystem::curr(const Term & term) const
@@ -169,8 +169,8 @@ bool RelationalTransitionSystem::only_curr(const Term & term) const
       continue;
     }
 
-    if (t->is_symbolic_const() && (states_.find(t) == states_.end())
-        && (inputs_.find(t) == inputs_.end())) {
+    if (t->is_symbolic_const() && (states_.find(t) == states_.end()))
+    {
       return false;
     }
 
@@ -211,6 +211,20 @@ bool RelationalTransitionSystem::known_symbols(const Term & term) const
   }
 
   return true;
+}
+
+void RelationalTransitionSystem::update_inputs(Term term)
+{
+  UnorderedTermSet free_symbols;
+  get_free_symbols(term, free_symbols);
+  for (auto s : free_symbols)
+  {
+    if (states_.find(s) == states_.end() &&
+        next_states_.find(s) == next_states_.end())
+    {
+      inputs_.insert(s);
+    }
+  }
 }
 
 }  // namespace cosa

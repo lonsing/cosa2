@@ -16,6 +16,7 @@
 
 
 #include "btor2_encoder.h"
+#include "utils/term_analysis.h"
 
 #include <iostream>
 
@@ -237,8 +238,9 @@ void BTOR2Encoder::parse(const std::string filename)
       } else {
         symbol_ = "state" + to_string(l_->id);
       }
-
-      Term state = rts_.make_state(symbol_, linesort_);
+      Term state = solver_->make_symbol(symbol_, linesort_);
+      Term next_state = solver_->make_symbol(symbol_ + ".next", linesort_);
+      rts_.declare_state(state, next_state);
       terms_[l_->id] = state;
       statesvec_.push_back(state);
       // will be removed from this map if there's a next function for this state
@@ -251,7 +253,7 @@ void BTOR2Encoder::parse(const std::string filename)
       } else {
         symbol_ = "input" + to_string(l_->id);
       }
-      Term input = rts_.make_input(symbol_, linesort_);
+      Term input = solver_->make_symbol(symbol_, linesort_);
       terms_[l_->id] = input;
       inputsvec_.push_back(input);
     } else if (l_->tag == BTOR2_TAG_output) {
@@ -282,7 +284,20 @@ void BTOR2Encoder::parse(const std::string filename)
           throw CosaException("Unknown sort tag");
       }
     } else if (l_->tag == BTOR2_TAG_constraint) {
-      rts_.add_invar(bv_to_bool(termargs_[0]));
+      Term constraint = bv_to_bool(termargs_[0]);
+      rts_.add_invar(constraint);
+      // any non-state variables must be promoted to states
+      UnorderedTermSet free_symbols;
+      get_free_symbols(constraint, free_symbols);
+      const UnorderedTermSet & states = rts_.states();
+      for (auto s : free_symbols)
+      {
+        if (states.find(s) == states.end())
+        {
+          Term next_state = solver_->make_symbol(s->to_string() + ".next", s->get_sort());
+          rts_.declare_state(s, next_state);
+        }
+      }
     } else if (l_->tag == BTOR2_TAG_init) {
       if (termargs_.size() != 2) {
         throw CosaException("Expecting two term arguments to init");

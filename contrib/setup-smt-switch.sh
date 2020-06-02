@@ -45,8 +45,9 @@ mkdir -p $DEPS
 
 if [ ! -d "$DEPS/smt-switch" ]; then
     cd $DEPS
-    git clone https://github.com/makaimann/smt-switch
+    git clone https://github.com/lonsing/smt-switch.git
     cd smt-switch
+    git checkout cosa2-refcount-debugging
     ./contrib/setup-btor.sh
 
     if [[ "$WITH_MSAT" != default ]]; then
@@ -57,7 +58,7 @@ if [ ! -d "$DEPS/smt-switch" ]; then
         ./contrib/setup-cvc4.sh
     fi
 
-    ./configure.sh --btor $CONF_OPTS --prefix=local --static
+    ./configure.sh --debug --btor $CONF_OPTS --prefix=local --static
     cd build
     make -j$(nproc)
     make test

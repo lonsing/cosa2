@@ -39,7 +39,7 @@ Term Unroller::at_time(const Term & t, unsigned int k)
     return it->second;
   }
 
-  return = solver_->substitute(t, cache);
+  return solver_->substitute(t, cache);
 }
 
 Term Unroller::untime(const Term & t) const
